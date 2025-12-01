@@ -28,56 +28,74 @@ export function textToSpeech(text: string, voice: SpeechSynthesisVoice): Promise
         const chunks: Blob[] = [];
 
         try {
+            // Use a flag to ensure we only resolve or reject once
+            let settled = false;
+            
             audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
             destination = audioContext.createMediaStreamDestination();
+            
+            // Create a GainNode to route the audio
+            const gainNode = audioContext.createGain();
+            gainNode.connect(destination);
+            
+            // This is the magic part: We need an audio source to get SpeechSynthesis to output to the Web Audio API
+            // We can't directly get the stream, so we use a dummy oscillator node.
+            // The browser will then route the speechSynthesis output to this context.
+            const oscillator = audioContext.createOscillator();
+            oscillator.connect(gainNode);
+
             mediaRecorder = new MediaRecorder(destination.stream);
-        } catch (e) {
-            return reject(new Error("Could not create audio recording context. Your browser might not be supported."));
-        }
+            
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    chunks.push(event.data);
+                }
+            };
 
+            mediaRecorder.onstop = () => {
+                if (settled) return;
+                settled = true;
+                const audioBlob = new Blob(chunks, { type: mediaRecorder.mimeType });
+                audioContext.close().catch(console.error);
+                if (audioBlob.size === 0) {
+                    reject(new Error("Audio generation resulted in an empty file. The selected voice may be incompatible."));
+                } else {
+                    resolve(audioBlob);
+                }
+            };
+            
+            mediaRecorder.onerror = (event) => {
+                if (settled) return;
+                settled = true;
+                audioContext.close().catch(console.error);
+                reject((event as any).error || new Error('MediaRecorder encountered an error.'));
+            };
 
-        mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-                chunks.push(event.data);
-            }
-        };
+            utterance.onend = () => {
+                // A short delay to ensure all audio has been captured by the MediaRecorder
+                setTimeout(() => {
+                    if (mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                    }
+                }, 500); // Increased delay slightly for safety
+            };
 
-        mediaRecorder.onstop = () => {
-            const audioBlob = new Blob(chunks, { type: mediaRecorder.mimeType });
-            audioContext.close().catch(console.error);
-            resolve(audioBlob);
-        };
-        
-        mediaRecorder.onerror = (event) => {
-            audioContext.close().catch(console.error);
-            reject((event as any).error || new Error('MediaRecorder encountered an error.'));
-        };
-
-        utterance.onend = () => {
-            // A short delay to ensure all audio has been captured by the MediaRecorder
-            setTimeout(() => {
+            utterance.onerror = (event) => {
+                if (settled) return;
+                settled = true;
                 if (mediaRecorder.state === 'recording') {
                     mediaRecorder.stop();
                 }
-            }, 300);
-        };
+                audioContext.close().catch(console.error);
+                reject(new Error(`Speech synthesis failed: ${event.error}`));
+            };
+            
+            // Start the recorder and then the speech synthesis
+            mediaRecorder.start();
+            window.speechSynthesis.speak(utterance);
 
-        utterance.onerror = (event) => {
-            if (mediaRecorder.state === 'recording') {
-                mediaRecorder.stop();
-            }
-            audioContext.close().catch(console.error);
-            reject(new Error(`Speech synthesis failed: ${event.error}`));
-        };
-        
-        // This is a workaround to get the audio stream into the AudioContext
-        const source = audioContext.createBufferSource();
-        // This is a dummy source, we just need to connect something to the destination.
-        // The real audio comes from the speech synthesis utterance.
-        source.connect(destination);
-        
-        // Start the recorder and then the speech synthesis
-        mediaRecorder.start();
-        window.speechSynthesis.speak(utterance);
+        } catch (e: any) {
+            reject(new Error(`Could not create audio context. Your browser might not be supported. Error: ${e.message}`));
+        }
     });
 }
