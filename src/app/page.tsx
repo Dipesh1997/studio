@@ -5,13 +5,12 @@ import { Header } from '@/components/Header';
 import { VoiceoverPanel } from '@/components/VoiceoverPanel';
 import { PreviewPanel } from '@/components/PreviewPanel';
 import { useToast } from '@/hooks/use-toast';
-import { suggestVoiceoverScript } from '@/lib/actions';
+import { suggestVoiceoverScript, generateVoiceover } from '@/lib/actions';
 import { mergeAudioAndVideo } from '@/lib/video-utils';
-import { textToSpeech } from '@/lib/tts-utils';
 
 export default function Home() {
   const [script, setScript] = useState('');
-  const [voice, setVoice] = useState<SpeechSynthesisVoice | null>(null);
+  const [voice, setVoice] = useState('Algenib'); // Default voice
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -71,17 +70,15 @@ export default function Home() {
     }
 
     setIsGeneratingAudio(true);
-    try {
-      const audioBlob = await textToSpeech(script, voice);
-      const newAudioUrl = URL.createObjectURL(audioBlob);
-      setAudioUrl(newAudioUrl);
+    const result = await generateVoiceover({ text: script, voice });
+    
+    if (result.error) {
+      toast({ title: 'Error', description: result.error, variant: 'destructive' });
+    } else if (result.audioDataUri) {
+      setAudioUrl(result.audioDataUri);
       toast({ title: 'Success', description: 'Voiceover generated!' });
-    } catch (error: any) {
-      console.error(error);
-      toast({ title: 'Error', description: error.message || 'Failed to generate voiceover.', variant: 'destructive' });
-    } finally {
-        setIsGeneratingAudio(false);
     }
+    setIsGeneratingAudio(false);
   };
 
   const handleExport = async () => {
