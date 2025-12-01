@@ -23,13 +23,11 @@ export default function Home() {
   const handleVideoSelect = (file: File | null) => {
     if (videoUrl) {
       URL.revokeObjectURL(videoUrl);
-    }
-    if (file) {
-      setVideoFile(file);
-      setVideoUrl(URL.createObjectURL(file));
-    } else {
-      setVideoFile(null);
       setVideoUrl(null);
+    }
+    setVideoFile(file);
+    if (file) {
+      setVideoUrl(URL.createObjectURL(file));
     }
   };
   

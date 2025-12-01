@@ -3,8 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Sparkles, Mic, Video, Loader2, FileCheck } from 'lucide-react';
+import { Sparkles, Mic, Video, Loader2, FileCheck, Camera } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { VideoRecorder } from '@/components/VideoRecorder';
 
 type VoiceoverPanelProps = {
   script: string;
@@ -75,28 +77,39 @@ export function VoiceoverPanel({
         )}
 
         <div className="space-y-2">
-            <Label htmlFor="video-upload">Select Video</Label>
-            <div className="flex items-center gap-4">
-                <Button asChild variant="outline" className="flex-shrink-0">
-                    <label htmlFor="video-upload" className="cursor-pointer flex items-center gap-2">
-                        <Video />
-                        <span>Choose Video</span>
-                    </label>
-                </Button>
-                {videoFileName && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground truncate">
-                        <FileCheck className="text-green-500 h-5 w-5" />
-                        <span className="truncate" title={videoFileName}>{videoFileName}</span>
-                    </div>
-                )}
-            </div>
-            <Input
-              id="video-upload"
-              type="file"
-              accept="video/*"
-              onChange={handleFileChange}
-              className="hidden"
-            />
+            <Label>Video Source</Label>
+            <Tabs defaultValue="upload">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="upload"><Video className="mr-2"/>Select Video</TabsTrigger>
+                <TabsTrigger value="record"><Camera className="mr-2"/>Record Video</TabsTrigger>
+              </TabsList>
+              <TabsContent value="upload" className="pt-4">
+                <div className="flex items-center gap-4">
+                    <Button asChild variant="outline" className="flex-shrink-0">
+                        <label htmlFor="video-upload" className="cursor-pointer flex items-center gap-2">
+                            <Video />
+                            <span>Choose Video</span>
+                        </label>
+                    </Button>
+                    {videoFileName && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground truncate">
+                            <FileCheck className="text-green-500 h-5 w-5" />
+                            <span className="truncate" title={videoFileName}>{videoFileName}</span>
+                        </div>
+                    )}
+                </div>
+                <Input
+                  id="video-upload"
+                  type="file"
+                  accept="video/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </TabsContent>
+              <TabsContent value="record" className="pt-4">
+                <VideoRecorder onRecordingComplete={onVideoSelect} />
+              </TabsContent>
+            </Tabs>
         </div>
       </CardContent>
     </Card>
