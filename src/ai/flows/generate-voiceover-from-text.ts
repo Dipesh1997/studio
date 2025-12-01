@@ -46,7 +46,6 @@ const generateVoiceoverFromTextFlow = ai.defineFlow(
         responseModalities: ['AUDIO'],
         speechConfig: {
           voiceConfig: {
-            // Note: Cloud TTS voices might be more reliable here, but we're sticking to the prebuilt ones.
             prebuiltVoiceConfig: {voiceName: voice},
           },
         },
@@ -55,7 +54,7 @@ const generateVoiceoverFromTextFlow = ai.defineFlow(
     });
 
     if (!media) {
-      throw new Error('no media returned');
+      throw new Error('No media was returned from the text-to-speech model.');
     }
     const audioBuffer = Buffer.from(
       media.url.substring(media.url.indexOf(',') + 1),

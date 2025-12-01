@@ -28,6 +28,8 @@ const voices = [
     { value: 'Achernar', label: 'English (UK, Male)' },
     { value: 'Enif', label: 'Spanish (Spain, Female)' },
     { value: 'Fomalhaut', label: 'French (France, Male)' },
+    { value: 'Rigel', label: 'German (Germany, Male)' },
+    { value: 'Canopus', label: 'Italian (Italy, Female)' },
 ];
 
 export function VoiceoverPanel({
@@ -75,8 +77,10 @@ export function VoiceoverPanel({
           <Label htmlFor="voice-select">Voice</Label>
           <Select value={voice} onValueChange={setVoice}>
             <SelectTrigger id="voice-select" className="w-full">
-              <Speaker />
-              <SelectValue placeholder="Select a voice" />
+              <div className="flex items-center gap-2">
+                <Speaker />
+                <SelectValue placeholder="Select a voice" />
+              </div>
             </SelectTrigger>
             <SelectContent>
               {voices.map((v) => (
