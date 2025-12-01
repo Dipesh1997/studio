@@ -1,3 +1,126 @@
+'use client';
+
+import { useState } from 'react';
+import { Header } from '@/components/Header';
+import { VoiceoverPanel } from '@/components/VoiceoverPanel';
+import { PreviewPanel } from '@/components/PreviewPanel';
+import { useToast } from '@/hooks/use-toast';
+import { generateVoiceoverFromText, suggestVoiceoverScript } from '@/lib/actions';
+import { mergeAudioAndVideo } from '@/lib/video-utils';
+
 export default function Home() {
-  return <></>;
+  const [script, setScript] = useState('');
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  
+  const [isGeneratingScript, setIsGeneratingScript] = useState(false);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const { toast } = useToast();
+
+  const handleVideoSelect = (file: File | null) => {
+    if (videoUrl) {
+      URL.revokeObjectURL(videoUrl);
+    }
+    if (file) {
+      setVideoFile(file);
+      setVideoUrl(URL.createObjectURL(file));
+    } else {
+      setVideoFile(null);
+      setVideoUrl(null);
+    }
+  };
+  
+  const handleSuggestScript = async () => {
+    if (!script.trim()) {
+      toast({
+        title: 'Idea Required',
+        description: 'Please provide a subject idea for the script.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setIsGeneratingScript(true);
+    const result = await suggestVoiceoverScript({ subjectIdea: script });
+    if (result.error) {
+      toast({ title: 'Error', description: result.error, variant: 'destructive' });
+    } else {
+      setScript(result.script || '');
+    }
+    setIsGeneratingScript(false);
+  };
+  
+  const handleGenerateAudio = async () => {
+    if (!script.trim()) {
+      toast({
+        title: 'Script Required',
+        description: 'Please enter a script to generate a voiceover.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setIsGeneratingAudio(true);
+    const result = await generateVoiceoverFromText({ text: script });
+    if (result.error) {
+      toast({ title: 'Error', description: result.error, variant: 'destructive' });
+    } else if (result.media) {
+      setAudioUrl(result.media);
+      toast({ title: 'Success', description: 'Voiceover generated!' });
+    }
+    setIsGeneratingAudio(false);
+  };
+
+  const handleExport = async () => {
+    if (!videoFile || !audioUrl) {
+      toast({ title: 'Missing files', description: 'Please select a video and generate a voiceover first.', variant: 'destructive' });
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const blob = await mergeAudioAndVideo(videoFile, audioUrl);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `voiceover-studio-${Date.now()}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({ title: 'Export Complete', description: 'Your video has been downloaded.' });
+    } catch (error: any) {
+      console.error(error);
+      toast({ title: 'Export Failed', description: error.message || 'An unknown error occurred.', variant: 'destructive' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen bg-background">
+      <Header />
+      <main className="flex-1 container mx-auto p-4 md:p-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          <VoiceoverPanel
+            script={script}
+            setScript={setScript}
+            onVideoSelect={handleVideoSelect}
+            onSuggestScript={handleSuggestScript}
+            onGenerateAudio={handleGenerateAudio}
+            isGeneratingScript={isGeneratingScript}
+            isGeneratingAudio={isGeneratingAudio}
+            audioUrl={audioUrl}
+            videoFileName={videoFile?.name}
+          />
+          <PreviewPanel
+            videoUrl={videoUrl}
+            audioUrl={audioUrl}
+            isExporting={isExporting}
+            onExport={handleExport}
+          />
+        </div>
+      </main>
+    </div>
+  );
 }
