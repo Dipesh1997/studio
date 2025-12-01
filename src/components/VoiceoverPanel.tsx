@@ -3,14 +3,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Sparkles, Mic, Video, Loader2, FileCheck, Camera } from 'lucide-react';
+import { Sparkles, Mic, Video, Loader2, FileCheck, Camera, Speaker } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VideoRecorder } from '@/components/VideoRecorder';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type VoiceoverPanelProps = {
   script: string;
   setScript: Dispatch<SetStateAction<string>>;
+  voice: string;
+  setVoice: Dispatch<SetStateAction<string>>;
   onVideoSelect: (file: File | null) => void;
   onSuggestScript: () => void;
   onGenerateAudio: () => void;
@@ -20,9 +23,18 @@ type VoiceoverPanelProps = {
   videoFileName: string | undefined;
 };
 
+const voices = [
+    { value: 'Algenib', label: 'English (US, Female)' },
+    { value: 'Achernar', label: 'English (UK, Male)' },
+    { value: 'Enif', label: 'Spanish (Spain, Female)' },
+    { value: 'Fomalhaut', label: 'French (France, Male)' },
+];
+
 export function VoiceoverPanel({
   script,
   setScript,
+  voice,
+  setVoice,
   onVideoSelect,
   onSuggestScript,
   onGenerateAudio,
@@ -58,6 +70,22 @@ export function VoiceoverPanel({
             className="min-h-[150px]"
           />
         </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="voice-select">Voice</Label>
+          <Select value={voice} onValueChange={setVoice}>
+            <SelectTrigger id="voice-select" className="w-full">
+              <Speaker />
+              <SelectValue placeholder="Select a voice" />
+            </SelectTrigger>
+            <SelectContent>
+              {voices.map((v) => (
+                <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="flex flex-col sm:flex-row gap-2">
           <Button onClick={onSuggestScript} disabled={isGeneratingScript} className="w-full">
             {isGeneratingScript ? <Loader2 className="animate-spin" /> : <Sparkles />}

@@ -10,6 +10,7 @@ import { mergeAudioAndVideo } from '@/lib/video-utils';
 
 export default function Home() {
   const [script, setScript] = useState('');
+  const [voice, setVoice] = useState('Algenib');
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -60,7 +61,7 @@ export default function Home() {
       return;
     }
     setIsGeneratingAudio(true);
-    const result = await generateVoiceoverFromText({ text: script });
+    const result = await generateVoiceoverFromText({ text: script, voice });
     if (result.error) {
       toast({ title: 'Error', description: result.error, variant: 'destructive' });
     } else if (result.media) {
@@ -103,6 +104,8 @@ export default function Home() {
           <VoiceoverPanel
             script={script}
             setScript={setScript}
+            voice={voice}
+            setVoice={setVoice}
             onVideoSelect={handleVideoSelect}
             onSuggestScript={handleSuggestScript}
             onGenerateAudio={handleGenerateAudio}

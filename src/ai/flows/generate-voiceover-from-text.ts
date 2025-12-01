@@ -16,6 +16,7 @@ import {z} from 'genkit';
 
 const GenerateVoiceoverFromTextInputSchema = z.object({
   text: z.string().describe('The text to convert to speech.'),
+  voice: z.string().describe('The voice to use for the voiceover.'),
 });
 export type GenerateVoiceoverFromTextInput = z.infer<typeof GenerateVoiceoverFromTextInputSchema>;
 
@@ -38,18 +39,19 @@ const generateVoiceoverFromTextFlow = ai.defineFlow(
     inputSchema: GenerateVoiceoverFromTextInputSchema,
     outputSchema: GenerateVoiceoverFromTextOutputSchema,
   },
-  async text => {
+  async ({text, voice}) => {
     const {media} = await ai.generate({
       model: 'googleai/gemini-2.5-flash-preview-tts',
       config: {
         responseModalities: ['AUDIO'],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: {voiceName: 'Algenib'},
+            // Note: Cloud TTS voices might be more reliable here, but we're sticking to the prebuilt ones.
+            prebuiltVoiceConfig: {voiceName: voice},
           },
         },
       },
-      prompt: text.text,
+      prompt: text,
     });
 
     if (!media) {
@@ -58,7 +60,7 @@ const generateVoiceoverFromTextFlow = ai.defineFlow(
     const audioBuffer = Buffer.from(
       media.url.substring(media.url.indexOf(',') + 1),
       'base64'
-    );    
+    );
     return {
       media: 'data:audio/wav;base64,' + (await toWav(audioBuffer)),
     };
