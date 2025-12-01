@@ -6,7 +6,7 @@
  *
  * @param text The text to be synthesized into speech.
  * @param voiceURI The URI of the `SpeechSynthesisVoice` to use. If empty, the browser's default is used.
- * @returns A Promise that resolves with a Blob containing the generated audio in WAV format.
+ * @returns A Promise that resolves with a Blob containing the generated audio in WEBM format.
  */
 export function textToSpeech(text: string, voiceURI: string): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -22,18 +22,24 @@ export function textToSpeech(text: string, voiceURI: string): Promise<Blob> {
 
     const chunks: Blob[] = [];
     mediaRecorder.ondataavailable = (event) => {
-      chunks.push(event.data);
+      if (event.data.size > 0) {
+        chunks.push(event.data);
+      }
     };
 
     mediaRecorder.onstop = () => {
       const blob = new Blob(chunks, { type: 'audio/webm' });
       audioContext.close();
-      resolve(blob);
+      if (blob.size === 0) {
+        reject(new Error('Generated audio is empty. The speech synthesis might have been interrupted or failed silently.'));
+      } else {
+        resolve(blob);
+      }
     };
 
     mediaRecorder.onerror = (event) => {
       audioContext.close();
-      reject(new Error(`MediaRecorder error: ${(event as any).error.name}`));
+      reject(new Error(`MediaRecorder error: ${(event as any).error?.name || 'Unknown error'}`));
     };
 
     const utterance = new SpeechSynthesisUtterance(text);
@@ -46,22 +52,25 @@ export function textToSpeech(text: string, voiceURI: string): Promise<Blob> {
 
     // This is the crucial part: we create a source node that can be connected to our destination.
     // The utterance itself doesn't expose an audio stream directly.
-    // We create a dummy oscillator to keep the audio context alive while the utterance is speaking.
-    // The actual speech audio is captured at the system level and routed into our context.
+    // We create a dummy oscillator to keep the audio context "warm" and connected.
+    // The browser routes the actual speech audio through the system output, which our context captures.
     const source = audioContext.createBufferSource();
-    source.connect(dest); // Connect our dummy source to the destination stream.
+    source.connect(dest);
 
     utterance.onstart = () => {
-      mediaRecorder.start();
+      if (mediaRecorder.state !== 'recording') {
+        mediaRecorder.start();
+      }
     };
 
     utterance.onend = () => {
-      // Use a short delay to ensure all audio data is captured before stopping the recorder.
+      // Use a short delay. This is critical to ensure all audio data is captured
+      // before stopping the recorder, as the 'onend' event can fire slightly early.
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
           mediaRecorder.stop();
         }
-      }, 300);
+      }, 500);
     };
 
     utterance.onerror = (event) => {
