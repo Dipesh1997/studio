@@ -15,9 +15,10 @@ export async function suggestVoiceoverScript(
   try {
     const result = await suggestVoiceoverScriptFlow(input);
     return { script: result.script };
-  } catch (error) {
-    console.error(error);
-    return { error: 'Failed to suggest script. Please try again.' };
+  } catch (error: any) {
+    console.error('[suggestVoiceoverScript Error]', error);
+    const errorMessage = error.cause?.message || error.message || 'Failed to suggest script. Please try again.';
+    return { error: errorMessage };
   }
 }
 
@@ -27,8 +28,9 @@ export async function generateVoiceoverFromText(
   try {
     const result = await generateVoiceoverFromTextFlow(input);
     return { media: result.media };
-  } catch (error) {
-    console.error(error);
-    return { error: 'Failed to generate voiceover. Please try again.' };
+  } catch (error: any) {
+    console.error('[generateVoiceoverFromText Error]', error);
+    const errorMessage = error.cause?.message || error.message || 'Failed to generate voiceover. Please try again.';
+    return { error: errorMessage };
   }
 }
