@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,8 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 type VoiceoverPanelProps = {
   script: string;
   setScript: Dispatch<SetStateAction<string>>;
-  voice: string;
-  setVoice: Dispatch<SetStateAction<string>>;
+  voice: SpeechSynthesisVoice | null;
+  setVoice: Dispatch<SetStateAction<SpeechSynthesisVoice | null>>;
   onVideoSelect: (file: File | null) => void;
   onSuggestScript: () => void;
   onGenerateAudio: () => void;
@@ -22,15 +25,6 @@ type VoiceoverPanelProps = {
   audioUrl: string | null;
   videoFileName: string | undefined;
 };
-
-const voices = [
-    { value: 'Algenib', label: 'English (US, Female)' },
-    { value: 'Achernar', label: 'English (UK, Male)' },
-    { value: 'Enif', label: 'Spanish (Spain, Female)' },
-    { value: 'Fomalhaut', label: 'French (France, Male)' },
-    { value: 'Rigel', label: 'German (Germany, Male)' },
-    { value: 'Canopus', label: 'Italian (Italy, Female)' },
-];
 
 export function VoiceoverPanel({
   script,
@@ -45,9 +39,38 @@ export function VoiceoverPanel({
   audioUrl,
   videoFileName,
 }: VoiceoverPanelProps) {
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      if (availableVoices.length > 0) {
+        setVoices(availableVoices);
+        // Set a default voice
+        if (!voice) {
+          const defaultVoice = availableVoices.find(v => v.lang.startsWith('en')) || availableVoices[0];
+          setVoice(defaultVoice);
+        }
+      }
+    };
+    
+    // Voices are loaded asynchronously
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices(); // Initial attempt
+
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+    }
+  }, [setVoice, voice]);
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     onVideoSelect(file || null);
+  };
+
+  const handleVoiceChange = (voiceURI: string) => {
+    const selectedVoice = voices.find(v => v.voiceURI === voiceURI);
+    setVoice(selectedVoice || null);
   };
 
   return (
@@ -75,16 +98,16 @@ export function VoiceoverPanel({
 
         <div className="space-y-2">
           <Label htmlFor="voice-select">Voice</Label>
-          <Select value={voice} onValueChange={setVoice}>
+          <Select value={voice?.voiceURI} onValueChange={handleVoiceChange} disabled={voices.length === 0}>
             <SelectTrigger id="voice-select" className="w-full">
               <div className="flex items-center gap-2">
                 <Speaker />
-                <SelectValue placeholder="Select a voice" />
+                <SelectValue placeholder={voices.length > 0 ? "Select a voice" : "Loading voices..."} />
               </div>
             </SelectTrigger>
             <SelectContent>
               {voices.map((v) => (
-                <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+                <SelectItem key={v.voiceURI} value={v.voiceURI}>{`${v.name} (${v.lang})`}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -95,7 +118,7 @@ export function VoiceoverPanel({
             {isGeneratingScript ? <Loader2 className="animate-spin" /> : <Sparkles />}
             Suggest Script
           </Button>
-          <Button onClick={onGenerateAudio} disabled={isGeneratingAudio} className="w-full">
+          <Button onClick={onGenerateAudio} disabled={isGeneratingAudio || voices.length === 0} className="w-full">
             {isGeneratingAudio ? <Loader2 className="animate-spin" /> : <Mic />}
             Generate Voiceover
           </Button>
