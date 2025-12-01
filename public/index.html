@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoiceOver Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased">
+    <div id="app" class="flex flex-col min-h-screen">
+        <header class="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex h-16 items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="clapperboard" class="h-8 w-8 text-slate-900"></i>
+                        <h1 class="text-2xl font-bold text-slate-900">
+                            VoiceOver Studio
+                        </h1>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 container mx-auto p-4 md:p-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                
+                <!-- Voiceover Panel -->
+                <div class="rounded-lg border bg-white text-slate-900 shadow-lg space-y-6">
+                    <div class="flex flex-col space-y-1.5 p-6">
+                        <h3 class="text-2xl font-semibold leading-none tracking-tight flex items-center gap-2"><i data-lucide="mic"></i> Create Voiceover</h3>
+                        <p class="text-sm text-slate-500">Generate a script, convert it to speech, and apply it to a video.</p>
+                    </div>
+                    <div class="p-6 pt-0 space-y-6">
+                        <div class="space-y-2">
+                            <label for="api-key-input" class="text-sm font-medium leading-none">Gemini API Key</label>
+                            <input id="api-key-input" type="password" placeholder="Enter your Gemini API Key here" class="flex h-10 w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                            <p class="text-xs text-slate-500">Your key is stored only in your browser. Get a free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-600 hover:underline">Google AI Studio</a>.</p>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="script-input" class="text-sm font-medium leading-none">Voiceover Script</label>
+                            <textarea id="script-input" placeholder="Type your script here, or provide an idea and click 'Suggest Script'." class="flex min-h-[150px] w-full rounded-md border border-slate-300 bg-transparent px-3 py-2 text-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"></textarea>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <label for="voice-select" class="text-sm font-medium leading-none">Voice</label>
+                            <select id="voice-select" class="flex h-10 w-full items-center justify-between rounded-md border border-slate-300 bg-white px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="Algenib">Algenib (Male, US English)</option>
+                                <option value="Sirius">Sirius (Male, US English)</option>
+                                <option value="Enif">Enif (Female, US English)</option>
+                                <option value="Procyon">Procyon (Female, US English)</option>
+                                <option value="King">King (Male, British English)</option>
+                                <option value="Queen">Queen (Female, British English)</option>
+                                <option value="Prince">Prince (Male, Indian English)</option>
+                                <option value="Princess">Princess (Female, Indian English)</option>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <button id="suggest-script-btn" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 w-full bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50">
+                                <i data-lucide="sparkles" class="button-icon"></i>
+                                <span class="button-text">Suggest Script</span>
+                            </button>
+                            <button id="generate-audio-btn" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 w-full bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50">
+                                <i data-lucide="mic" class="button-icon"></i>
+                                <span class="button-text">Generate Voiceover</span>
+                            </button>
+                        </div>
+
+                        <div id="audio-player-container" class="space-y-2 hidden">
+                            <label class="text-sm font-medium">Generated Audio</label>
+                            <audio id="audio-player" controls class="w-full"></audio>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="text-sm font-medium">Video Source</label>
+                            <div class="flex items-center gap-4">
+                                <label for="video-upload" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 border border-slate-300 bg-transparent hover:bg-slate-100 cursor-pointer">
+                                    <i data-lucide="video"></i>
+                                    <span>Choose Video</span>
+                                </label>
+                                <div id="video-file-name" class="text-sm text-slate-500 truncate hidden items-center gap-2">
+                                    <i data-lucide="file-check" class="text-green-500 h-5 w-5"></i>
+                                    <span class="truncate"></span>
+                                </div>
+                            </div>
+                            <input id="video-upload" type="file" accept="video/*" class="hidden">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview Panel -->
+                <div class="rounded-lg border bg-white text-slate-900 shadow-lg sticky top-24">
+                     <div class="flex flex-col space-y-1.5 p-6">
+                        <h3 class="text-2xl font-semibold leading-none tracking-tight flex items-center gap-2"><i data-lucide="film"></i> Preview & Export</h3>
+                        <p class="text-sm text-slate-500">Use the video controls to preview. The original audio is muted.</p>
+                    </div>
+                    <div class="p-6 pt-0 space-y-4">
+                        <div class="aspect-video w-full bg-slate-200 rounded-lg flex items-center justify-center overflow-hidden">
+                            <video id="video-preview" class="w-full h-full object-contain hidden" muted controls></video>
+                            <div id="video-placeholder" class="text-center text-slate-500 p-4">
+                               <i data-lucide="video" class="mx-auto h-12 w-12 mb-2"></i>
+                               <p>Generate a voiceover and select a video to see the preview here.</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                             <button id="export-btn" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-10 px-4 py-2 w-full bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50">
+                                <i data-lucide="download" class="button-icon"></i>
+                                <span class="button-text">Export Video</span>
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-500 text-center">Note: Exported video will be in .webm format.</p>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <div id="toast" class="hidden fixed top-5 right-5 bg-red-500 text-white p-4 rounded-lg shadow-lg">
+            <div class="flex justify-between items-center">
+                <div>
+                    <p id="toast-title" class="font-bold">Error</p>
+                    <p id="toast-description"></p>
+                </div>
+                <button id="toast-close" class="ml-4">&times;</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
