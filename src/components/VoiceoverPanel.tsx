@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Sparkles, Mic, Video, Loader2, FileCheck, Camera, Speaker } from 'lucide-react';
+import { Sparkles, Mic, Video, Loader2, FileCheck, Camera, Speaker, AlertCircle } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VideoRecorder } from '@/components/VideoRecorder';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 type VoiceoverPanelProps = {
   script: string;
@@ -26,20 +27,6 @@ type VoiceoverPanelProps = {
   videoFileName: string | undefined;
 };
 
-// High-quality voices available via the API
-const voices = [
-  { name: 'Algenib', value: 'Algenib' },
-  { name: 'Antares', value: 'Antares' },
-  { name: 'Arcturus', value: 'Arcturus' },
-  { name: 'Canopus', value: 'Canopus' },
-  { name: 'Deneb', value: 'Deneb' },
-  { name: 'Hadrian', value: 'Hadrian' },
-  { name: 'Proxima', value: 'Proxima' },
-  { name: 'Rigel', value: 'Rigel' },
-  { name: 'Spica', value: 'Spica' },
-  { name: 'Vega', value: 'Vega' },
-];
-
 export function VoiceoverPanel({
   script,
   setScript,
@@ -53,14 +40,43 @@ export function VoiceoverPanel({
   audioUrl,
   videoFileName,
 }: VoiceoverPanelProps) {
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [isSpeechSupported, setIsSpeechSupported] = useState(true);
+
+  useEffect(() => {
+    if (typeof window.speechSynthesis === 'undefined') {
+      setIsSpeechSupported(false);
+      return;
+    }
+
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      if (availableVoices.length > 0) {
+        setVoices(availableVoices);
+        // Set a default voice if none is selected
+        if (!voice && availableVoices.length > 0) {
+          setVoice(availableVoices[0].voiceURI);
+        }
+      }
+    };
+    
+    // Voices are loaded asynchronously
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, [setVoice, voice]);
+
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     onVideoSelect(file || null);
   };
 
-  const handleVoiceChange = (voiceValue: string) => {
-    setVoice(voiceValue);
+  const handleVoiceChange = (voiceURI: string) => {
+    setVoice(voiceURI);
   };
 
   return (
@@ -75,6 +91,16 @@ export function VoiceoverPanel({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {!isSpeechSupported && (
+            <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Text-to-Speech Not Supported</AlertTitle>
+                <AlertDescription>
+                    Your browser does not support the Web Speech API, which is required for voiceover generation. Please try a different browser like Chrome or Firefox.
+                </AlertDescription>
+            </Alert>
+        )}
+
         <div className="space-y-2">
           <Label htmlFor="script-input">Voiceover Script</Label>
           <Textarea
@@ -83,32 +109,35 @@ export function VoiceoverPanel({
             value={script}
             onChange={(e) => setScript(e.target.value)}
             className="min-h-[150px]"
+            disabled={!isSpeechSupported}
           />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="voice-select">Voice</Label>
-          <Select value={voice} onValueChange={handleVoiceChange}>
+          <Select value={voice} onValueChange={handleVoiceChange} disabled={!isSpeechSupported || voices.length === 0}>
             <SelectTrigger id="voice-select" className="w-full">
               <div className="flex items-center gap-2">
                 <Speaker />
-                <SelectValue placeholder="Select a voice" />
+                <SelectValue placeholder="Select a voice..." />
               </div>
             </SelectTrigger>
             <SelectContent>
-              {voices.map((v) => (
-                <SelectItem key={v.value} value={v.value}>{v.name}</SelectItem>
-              ))}
+              {voices.length > 0 ? voices.map((v) => (
+                <SelectItem key={v.voiceURI} value={v.voiceURI}>
+                  {`${v.name} (${v.lang})`}
+                </SelectItem>
+              )) : <SelectItem value="loading" disabled>Loading voices...</SelectItem>}
             </SelectContent>
           </Select>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button onClick={onSuggestScript} disabled={isGeneratingScript} className="w-full">
+          <Button onClick={onSuggestScript} disabled={isGeneratingScript || !isSpeechSupported} className="w-full">
             {isGeneratingScript ? <Loader2 className="animate-spin" /> : <Sparkles />}
             Suggest Script
           </Button>
-          <Button onClick={onGenerateAudio} disabled={isGeneratingAudio} className="w-full">
+          <Button onClick={onGenerateAudio} disabled={isGeneratingAudio || !isSpeechSupported} className="w-full">
             {isGeneratingAudio ? <Loader2 className="animate-spin" /> : <Mic />}
             Generate Voiceover
           </Button>

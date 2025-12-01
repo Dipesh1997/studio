@@ -5,12 +5,13 @@ import { Header } from '@/components/Header';
 import { VoiceoverPanel } from '@/components/VoiceoverPanel';
 import { PreviewPanel } from '@/components/PreviewPanel';
 import { useToast } from '@/hooks/use-toast';
-import { suggestVoiceoverScript, generateVoiceover } from '@/lib/actions';
+import { suggestVoiceoverScript } from '@/lib/actions';
+import { textToSpeech } from '@/lib/text-to-speech';
 import { mergeAudioAndVideo } from '@/lib/video-utils';
 
 export default function Home() {
   const [script, setScript] = useState('');
-  const [voice, setVoice] = useState('Algenib'); // Default voice
+  const [voice, setVoice] = useState(''); // Default voice will be set by browser
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -60,25 +61,23 @@ export default function Home() {
       });
       return;
     }
-    if (!voice) {
-        toast({
-            title: 'Voice Required',
-            description: 'Please select a voice from the dropdown.',
-            variant: 'destructive',
-        });
-        return;
-    }
 
     setIsGeneratingAudio(true);
-    const result = await generateVoiceover({ text: script, voice });
-    
-    if (result.error) {
-      toast({ title: 'Error', description: result.error, variant: 'destructive' });
-    } else if (result.audioDataUri) {
-      setAudioUrl(result.audioDataUri);
+    try {
+      const audioBlob = await textToSpeech(script, voice);
+      const url = URL.createObjectURL(audioBlob);
+      setAudioUrl(url);
       toast({ title: 'Success', description: 'Voiceover generated!' });
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        title: 'Voiceover Failed',
+        description: error.message || 'Could not generate audio. Your browser might not be supported.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingAudio(false);
     }
-    setIsGeneratingAudio(false);
   };
 
   const handleExport = async () => {
