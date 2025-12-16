@@ -56,7 +56,7 @@ const generateVoiceoverFromTextFlow = ai.defineFlow(
         plugins: [dynamicGoogleAI],
     }, async () => {
         return await ai.generate({
-          model: 'googleai/gemini-2.5-flash-preview-tts',
+          model: dynamicGoogleAI.model('gemini-2.5-flash-preview-tts'),
           config: {
             responseModalities: ['AUDIO'],
             speechConfig: {
