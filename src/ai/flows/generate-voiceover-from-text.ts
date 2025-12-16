@@ -48,8 +48,12 @@ const generateVoiceoverFromTextFlow = ai.defineFlow(
      if (!apiKey) {
       throw new Error('Gemini API key is required.');
     }
+    
+    // Dynamically create a googleAI instance with the provided key
+    const dynamicGoogleAI = googleAI({ apiKey });
+
     const {media} = await ai.run({
-        plugins: [googleAI({apiKey})],
+        plugins: [dynamicGoogleAI],
     }, async () => {
         return await ai.generate({
           model: 'googleai/gemini-2.5-flash-preview-tts',

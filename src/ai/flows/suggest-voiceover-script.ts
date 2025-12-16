@@ -30,7 +30,7 @@ export async function suggestVoiceoverScript(input: SuggestVoiceoverScriptInput)
 
 const prompt = ai.definePrompt({
   name: 'suggestVoiceoverScriptPrompt',
-  input: { schema: SuggestVoiceoverScriptInputSchema },
+  input: { schema: z.object({ subjectIdea: SuggestVoiceoverScriptInputSchema.shape.subjectIdea }) },
   output: { schema: SuggestVoiceoverScriptOutputSchema },
   prompt: `You are an AI assistant specialized in generating voiceover scripts for videos.
   Based on the subject idea provided, create a concise and engaging script suitable for a voiceover.
@@ -50,15 +50,19 @@ const suggestVoiceoverScriptFlow = ai.defineFlow(
     if (!apiKey) {
       throw new Error('Gemini API key is required.');
     }
+    
+    // Dynamically create a googleAI instance with the provided key
+    const dynamicGoogleAI = googleAI({ apiKey });
+
     const { output } = await ai.run(
       {
-        plugins: [googleAI({ apiKey })],
-        model: 'googleai/gemini-2.5-flash',
+        plugins: [dynamicGoogleAI],
       },
       async () => {
-        return prompt({ subjectIdea });
+        return await prompt({ subjectIdea });
       }
     );
+    
     return output!;
   }
 );
