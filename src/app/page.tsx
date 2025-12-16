@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { VoiceoverPanel } from '@/components/VoiceoverPanel';
 import { PreviewPanel } from '@/components/PreviewPanel';
 import { useToast } from '@/hooks/use-toast';
 import { suggestVoiceoverScript, generateVoiceoverFromText } from '@/lib/actions';
 import { mergeAudioAndVideo } from '@/lib/video-utils';
+import { ApiKeyManager } from '@/components/ApiKeyManager';
 
 export default function Home() {
   const [script, setScript] = useState('');
@@ -14,12 +15,20 @@ export default function Home() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState('');
   
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   const { toast } = useToast();
+
+  useEffect(() => {
+    const storedApiKey = localStorage.getItem('gemini_api_key');
+    if (storedApiKey) {
+      setApiKey(storedApiKey);
+    }
+  }, []);
 
   const handleVideoSelect = (file: File | null) => {
     if (videoUrl) {
@@ -33,6 +42,10 @@ export default function Home() {
   };
   
   const handleSuggestScript = async () => {
+    if (!apiKey) {
+      toast({ title: 'API Key Required', description: 'Please enter your Gemini API key first.', variant: 'destructive' });
+      return;
+    }
     if (!script.trim()) {
       toast({
         title: 'Idea Required',
@@ -42,7 +55,7 @@ export default function Home() {
       return;
     }
     setIsGeneratingScript(true);
-    const result = await suggestVoiceoverScript({ subjectIdea: script });
+    const result = await suggestVoiceoverScript({ subjectIdea: script, apiKey });
     if (result.error) {
       toast({ title: 'Error', description: result.error, variant: 'destructive' });
     } else {
@@ -52,6 +65,10 @@ export default function Home() {
   };
   
   const handleGenerateAudio = async () => {
+    if (!apiKey) {
+      toast({ title: 'API Key Required', description: 'Please enter your Gemini API key first.', variant: 'destructive' });
+      return;
+    }
     if (!script.trim()) {
       toast({
         title: 'Script Required',
@@ -62,7 +79,7 @@ export default function Home() {
     }
 
     setIsGeneratingAudio(true);
-    const result = await generateVoiceoverFromText({ text: script, voice });
+    const result = await generateVoiceoverFromText({ text: script, voice, apiKey });
 
     if (result.error) {
        toast({
@@ -113,26 +130,29 @@ export default function Home() {
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
       <main className="flex-1 container mx-auto p-4 md:p-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          <VoiceoverPanel
-            script={script}
-            setScript={setScript}
-            voice={voice}
-            setVoice={setVoice}
-            onVideoSelect={handleVideoSelect}
-            onSuggestScript={handleSuggestScript}
-            onGenerateAudio={handleGenerateAudio}
-            isGeneratingScript={isGeneratingScript}
-            isGeneratingAudio={isGeneratingAudio}
-            audioUrl={audioUrl}
-            videoFileName={videoFile?.name}
-          />
-          <PreviewPanel
-            videoUrl={videoUrl}
-            audioUrl={audioUrl}
-            isExporting={isExporting}
-            onExport={handleExport}
-          />
+        <div className="space-y-8">
+          <ApiKeyManager initialApiKey={apiKey} onApiKeySave={setApiKey} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <VoiceoverPanel
+              script={script}
+              setScript={setScript}
+              voice={voice}
+              setVoice={setVoice}
+              onVideoSelect={handleVideoSelect}
+              onSuggestScript={handleSuggestScript}
+              onGenerateAudio={handleGenerateAudio}
+              isGeneratingScript={isGeneratingScript}
+              isGeneratingAudio={isGeneratingAudio}
+              audioUrl={audioUrl}
+              videoFileName={videoFile?.name}
+            />
+            <PreviewPanel
+              videoUrl={videoUrl}
+              audioUrl={audioUrl}
+              isExporting={isExporting}
+              onExport={handleExport}
+            />
+          </div>
         </div>
       </main>
     </div>

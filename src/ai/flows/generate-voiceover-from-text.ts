@@ -10,10 +10,12 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import wav from 'wav';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const GenerateVoiceoverFromTextInputSchema = z.object({
   text: z.string().describe('The text to convert to speech.'),
   voice: z.string().optional().describe('The voice to use for the speech.'),
+  apiKey: z.string().optional().describe('The Gemini API key.'),
 });
 export type GenerateVoiceoverFromTextInput = z.infer<
   typeof GenerateVoiceoverFromTextInputSchema
@@ -42,21 +44,29 @@ const generateVoiceoverFromTextFlow = ai.defineFlow(
     inputSchema: GenerateVoiceoverFromTextInputSchema,
     outputSchema: GenerateVoiceoverFromTextOutputSchema,
   },
-  async ({text, voice}) => {
-    const {media} = await ai.generate({
-      model: 'googleai/gemini-2.5-flash-preview-tts',
-      config: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: {
-              voiceName: voice || 'Algenib', // Default to Algenib if no voice is provided
+  async ({text, voice, apiKey}) => {
+     if (!apiKey) {
+      throw new Error('Gemini API key is required.');
+    }
+    const {media} = await ai.run({
+        plugins: [googleAI({apiKey})],
+    }, async () => {
+        return await ai.generate({
+          model: 'googleai/gemini-2.5-flash-preview-tts',
+          config: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: {
+                  voiceName: voice || 'Algenib', // Default to Algenib if no voice is provided
+                },
+              },
             },
           },
-        },
-      },
-      prompt: text,
+          prompt: text,
+        });
     });
+    
 
     if (!media?.url) {
       throw new Error('No media returned from the text-to-speech model.');

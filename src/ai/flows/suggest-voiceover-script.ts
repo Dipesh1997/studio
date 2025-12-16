@@ -9,11 +9,13 @@
  * - `SuggestVoiceoverScriptOutput`: The output type for the `suggestVoiceoverScript` function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const SuggestVoiceoverScriptInputSchema = z.object({
   subjectIdea: z.string().describe('The subject idea for the video.'),
+  apiKey: z.string().optional().describe('The Gemini API key.'),
 });
 export type SuggestVoiceoverScriptInput = z.infer<typeof SuggestVoiceoverScriptInputSchema>;
 
@@ -28,14 +30,14 @@ export async function suggestVoiceoverScript(input: SuggestVoiceoverScriptInput)
 
 const prompt = ai.definePrompt({
   name: 'suggestVoiceoverScriptPrompt',
-  input: {schema: SuggestVoiceoverScriptInputSchema},
-  output: {schema: SuggestVoiceoverScriptOutputSchema},
+  input: { schema: SuggestVoiceoverScriptInputSchema },
+  output: { schema: SuggestVoiceoverScriptOutputSchema },
   prompt: `You are an AI assistant specialized in generating voiceover scripts for videos.
   Based on the subject idea provided, create a concise and engaging script suitable for a voiceover.
 
   Subject Idea: {{{subjectIdea}}}
 
-  Voiceover Script:`, 
+  Voiceover Script:`,
 });
 
 const suggestVoiceoverScriptFlow = ai.defineFlow(
@@ -44,8 +46,19 @@ const suggestVoiceoverScriptFlow = ai.defineFlow(
     inputSchema: SuggestVoiceoverScriptInputSchema,
     outputSchema: SuggestVoiceoverScriptOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
+  async ({ subjectIdea, apiKey }) => {
+    if (!apiKey) {
+      throw new Error('Gemini API key is required.');
+    }
+    const { output } = await ai.run(
+      {
+        plugins: [googleAI({ apiKey })],
+        model: 'googleai/gemini-2.5-flash',
+      },
+      async () => {
+        return prompt({ subjectIdea });
+      }
+    );
     return output!;
   }
 );
